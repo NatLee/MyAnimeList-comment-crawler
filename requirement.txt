@@ -1,0 +1,9 @@
+tqdm
+
+pymysql
+
+requests
+
+backoff
+
+bs4

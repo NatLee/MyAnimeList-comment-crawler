@@ -1,0 +1,15 @@
+__pycache__/
+
+.DS_Store
+
+Desktop.ini
+
+tmp/
+
+*.pkl
+
+sql/
+
+test.py
+
+.vscode
