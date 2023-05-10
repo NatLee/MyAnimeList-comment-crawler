@@ -22,9 +22,4 @@ TEMP_INFO_PICKLE_FOLDER = os.path.join(WORK_DIR, CONFIG.get('PATH', 'TempWorkInf
 WORKINFOS_PICKLE = os.path.join(WORK_DIR, CONFIG.get('PATH', 'WorkInfosPicklePath'))
 
 DATABASE_NAME = CONFIG.get('DATABASE', 'DatabaseName')
-CHAR_SET = CONFIG.get('DATABASE', 'CharSet')
-HOST = CONFIG.get('DATABASE', 'Host')
-PORT = CONFIG.getint('DATABASE', 'Port')
-USER = CONFIG.get('DATABASE', 'User')
-PWD = CONFIG.get('DATABASE', 'Password')
 

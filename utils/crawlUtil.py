@@ -25,6 +25,7 @@ from utils.dbUtil import AnimeAccess, Database
     giveup=lambda e: e.response is not None and e.response.status_code < 500
 )
 
+
 def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> list:
     '''
     Crawl reviews on all reviews page.
@@ -34,10 +35,10 @@ def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> l
     pageCounter = 1
 
     if animeAccess is not None:
-        allWorkId = animeAccess.getAllWorkId()
+        allWorkId = animeAccess.get_all_work_id()
 
     if checkTime and animeAccess is not None:
-        lastReviewPostTime = animeAccess.getLastReviewPostTime()
+        lastReviewPostTime = animeAccess.get_last_review_post_time()
         logging.info('Last review post time: {}'.format(lastReviewPostTime['postTime'].strftime('%Y-%m-%d %H:%M:%S')))
 
     with TqdmUpTo(unit=' page(s) ', unit_scale=True, miniters=1, position=1) as t:
@@ -93,7 +94,7 @@ def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> l
                             infoUrl = 'https://myanimelist.net/anime/{}/{}'.format(dataFormat['workId'], dataFormat['workName'])
                             logging.info('Found unknown work information. Now crawling...')
                             infoData = [infoCrawler(infoUrl)]
-                            animeAccess.pushWorkInfosToDatabase(infoData)
+                            animeAccess.push_work_infos_to_database(infoData)
                             allWorkId.append(dataFormat['workId'])
                         if checkTime and (lastReviewPostTime['postTime'] > dataFormat['postTime']):
                             return reviews
@@ -134,7 +135,7 @@ def reviewCrawler(workId:int = 37349, workName:str = 'Goblin_Slayer', animeAcces
     time.sleep(3)
 
     if checkTime and animeAccess is not None:
-        allWorkLastReviewPostTimeDict = animeAccess.getAllWorkLastReviewPostTime()
+        allWorkLastReviewPostTimeDict = animeAccess.get_all_work_last_review_post_time()
 
     with TqdmUpTo(unit=' page(s) ', unit_scale=True, miniters=1, position=1) as t:
         while True:
@@ -432,7 +433,7 @@ class Crawler(object):
         Push reviews to database.
         '''
         if self.__reviews is not None:
-            self.__animeAccess.pushReviewsToDatabase(reviews=self.__reviews)
+            self.__animeAccess.push_reviews_to_database(reviews=self.__reviews)
         return
 
     def pushReviewsToDatabaseByWorkInfos(self):
@@ -454,7 +455,7 @@ class Crawler(object):
         Push work information to database.
         '''
         if self.__workInfos is not None:
-            self.__animeAccess.pushWorkInfosToDatabase(workInfos=self.__workInfos)
+            self.__animeAccess.push_work_infos_to_database(workInfos=self.__workInfos)
         return
 
     def updateDataByAllReviewsPage(self):
