@@ -6,8 +6,9 @@ import os
 import pickle
 import multiprocessing as mp
 import random
-import logging
-import pdb
+
+from loguru import logger
+
 import backoff
 from tqdm import tqdm
 from bs4 import BeautifulSoup  
@@ -39,7 +40,7 @@ def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> l
 
     if checkTime and animeAccess is not None:
         lastReviewPostTime = animeAccess.get_last_review_post_time()
-        logging.info('Last review post time: {}'.format(lastReviewPostTime['postTime'].strftime('%Y-%m-%d %H:%M:%S')))
+        logger.info('Last review post time: {}'.format(lastReviewPostTime['postTime'].strftime('%Y-%m-%d %H:%M:%S')))
 
     with TqdmUpTo(unit=' page(s) ', unit_scale=True, miniters=1, position=1) as t:
         while True:
@@ -49,7 +50,11 @@ def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> l
             # block detection
             blockDetect = True
             while blockDetect:
-                response = requests.get('https://myanimelist.net/reviews.php?t=anime&p=' + str(pageCounter), headers=HEADERS, cookies=COOKIES)
+                response = requests.get(
+                    f'https://myanimelist.net/reviews.php?t=anime&p={pageCounter}',
+                    headers=HEADERS,
+                    cookies=COOKIES
+                )
                 webTextCount = len(response.text)
                 if webTextCount < 100:
                     num = random.randint(5, 10)
@@ -91,11 +96,14 @@ def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> l
 
                     if animeAccess is not None:
                         if dataFormat['workId'] is not None and dataFormat['workId'] not in allWorkId:
-                            infoUrl = 'https://myanimelist.net/anime/{}/{}'.format(dataFormat['workId'], dataFormat['workName'])
-                            logging.info('Found unknown work information. Now crawling...')
+                            infoUrl = f"https://myanimelist.net/anime/{dataFormat['workId']}/{dataFormat['workName']}"
+
+                            logger.info('Found unknown work information. Now crawling...')
+
                             infoData = [infoCrawler(infoUrl)]
                             animeAccess.push_work_infos_to_database(infoData)
                             allWorkId.append(dataFormat['workId'])
+
                         if checkTime and (lastReviewPostTime['postTime'] > dataFormat['postTime']):
                             return reviews
                             
@@ -120,7 +128,7 @@ def allReviewCrawler(animeAccess:AnimeAccess = None, checkTime:bool = True) -> l
                     reviews.append(dataFormat)
             else:
                 break
-        
+
     return reviews
 
 def reviewCrawler(workId:int = 37349, workName:str = 'Goblin_Slayer', animeAccess:AnimeAccess = None, checkTime:bool = True) -> list:
@@ -150,7 +158,7 @@ def reviewCrawler(workId:int = 37349, workName:str = 'Goblin_Slayer', animeAcces
                 if webTextCount < 100:
                     num = random.randint(5, 10)
                     print()
-                    logging.warning('Wait {} sec(s) for unblocking'.format(str(num)))
+                    logger.warning('Wait {} sec(s) for unblocking'.format(str(num)))
                     time.sleep(num)
                 else:
                     blockDetect = False
@@ -213,9 +221,9 @@ def reviewCrawler(workId:int = 37349, workName:str = 'Goblin_Slayer', animeAcces
         
     return reviews
 
-def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alchemist__Brotherhood') -> dict:
+def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/52034/Oshi_no_Ko') -> dict:
     '''
-    Crawl anime infomation.
+    Crawl Anime Information.
     '''
 
     dataFormat = {
@@ -229,7 +237,7 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alch
         'episodes': None,
         'status': None,
         'aired': None,
-        'permiered': None,
+        'premiered': None,
         'broadcast': None,
         'producer': None,
         'licensors': None,
@@ -243,7 +251,7 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alch
         'allRank': None,
         'popularityRank': None,
         'members': None,
-        'favorities': None,
+        'favorites': None,
         'lastUpdate': None,
     }
 
@@ -267,9 +275,11 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alch
         try:
             workResponse = requests.get(infoUrl, headers=HEADERS)
             workSoup = BeautifulSoup(workResponse.text, 'html.parser')
+            import pdb; pdb.set_trace()
             slide = workSoup.find_all('div', 'js-scrollfix-bottom')
             slideText = slide[0].text
         except Exception as e:
+            print(e)
             print(infoUrl)
             print(slide)
             time.sleep(random.randint(10,30))
@@ -283,7 +293,7 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alch
             else:
                 return target
         except Exception as e:
-            #print('No this attr.>> %s' % e)
+            print('No this attr.>> %s' % e)
             return None
     
     dataFormat['engName'] = catchSplitError(slideText , '\nAlternative Titles\nEnglish: ', '\n')
@@ -293,7 +303,7 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alch
     dataFormat['episodes'] = catchSplitError(slideText , '\nEpisodes:\n  ', '\n')
     dataFormat['status'] = catchSplitError(slideText , '\nStatus:\n  ', '\n')
     dataFormat['aired'] = catchSplitError(slideText , '\nAired:\n  ', '\n')
-    dataFormat['permiered'] = catchSplitError(slideText , '\nPremiered:\n', '\n')
+    dataFormat['premiered'] = catchSplitError(slideText , '\nPremiered:\n', '\n')
     dataFormat['broadcast'] = catchSplitError(slideText , '\nBroadcast:\n    ', '\n')
     if catchSplitError(slideText , '\nProducers:\n', '\n') is None:
         dataFormat['producer'] = None
@@ -321,7 +331,7 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/5114/Fullmetal_Alch
 
     dataFormat['popularityRank'] = catchSplitError(slideText , '\nPopularity:\n  #', '\n')
     dataFormat['members'] = catchSplitError(slideText , '\nMembers:\n    ', '\n').replace(',', '')
-    dataFormat['favorities'] = catchSplitError(slideText , '\nFavorites:\n  ', '\n').replace(',', '')
+    dataFormat['favorites'] = catchSplitError(slideText , '\nFavorites:\n  ', '\n').replace(',', '')
     dataFormat['lastUpdate'] = datetime.now()
 
     with open(workIdPickle, 'wb') as p:
@@ -345,7 +355,7 @@ def listCrawler() -> list:
             # block detection
             blockDetect = True
             while blockDetect:
-                rankResponse = requests.get('https://myanimelist.net/topanime.php?limit=' + str(startRank), headers=HEADERS)
+                rankResponse = requests.get(f'https://myanimelist.net/topanime.php?limit={startRank}', headers=HEADERS)
                 webTextCount = len(rankResponse.text)
                 if webTextCount < 100:
                     # Random sleep 5 to 10 seconds
@@ -387,7 +397,7 @@ class Crawler(object):
         
     def getWorkInfos(self) -> list:
         '''
-        Crawl all work infomation.
+        Crawl all work information.
         '''
         workInfos = self.__checkWorkInfos(days=7)
         if workInfos is None:
@@ -402,7 +412,7 @@ class Crawler(object):
         '''
         # Read workInfos.pkl if exists or crawl work infos.
         if os.path.isfile(WORKINFOS_PICKLE) and (datetime.today() - creationDate(WORKINFOS_PICKLE) < timedelta(days=days)):
-            logging.info('Detect %s file.' % WORKINFOS_PICKLE)
+            logger.info(f'Detect [{WORKINFOS_PICKLE}] file.')
             with open(WORKINFOS_PICKLE, 'rb') as p:
                 self.__workInfos = pickle.load(p)
         return self.__workInfos
@@ -441,11 +451,14 @@ class Crawler(object):
         After crawl all work information, then crawl and push their reviews to database.
         '''
         if self.__workInfos is not None:
-            logging.info('Starting crawl reviews with work infos.')
+            logger.info('Starting crawl reviews with work infos.')
             workInfoProgress = tqdm(self.__workInfos)
             for workInfo in workInfoProgress:
-                workInfoProgress.set_description('Review Processing [%s] %s' % (workInfo['workId'], workInfo['workName']))
-                _ = self.getReviewsByWork(workId=workInfo['workId'], workName=workInfo['workName'])
+                workInfoProgress.set_description(f"Review Processing [{workInfo['workId']}] {workInfo['workName']}")
+                _ = self.getReviewsByWork(
+                    workId=workInfo['workId'],
+                    workName=workInfo['workName']
+                )
                 # push one work reviews to db
                 self.pushReviewsToDatabase()
         return

@@ -1,8 +1,10 @@
 
 import os
-import logging
 import platform
-from datetime import datetime, timedelta
+from datetime import datetime
+
+from loguru import logger
+
 from tqdm import tqdm
 
 class TqdmUpTo(tqdm):
@@ -30,7 +32,7 @@ def creationDate(filePath):
         except AttributeError:
             # We're probably on Linux. No easy way to get creation dates here,
             # so we'll settle for when its content was last modified.
-            logging.warning('Unable to get create time, so return last modified time.')
+            logger.warning('Unable to get create time, so return last modified time.')
             time =  stat.st_mtime
     return datetime.fromtimestamp(time)
 

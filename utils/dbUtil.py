@@ -1,6 +1,8 @@
 import datetime
 import sqlite3
-import logging
+
+from loguru import logger
+
 from tqdm import tqdm
 from utils.gloVar import DATABASE_NAME
 
@@ -83,7 +85,7 @@ class AnimeAccess(object):
                 "`episodes` INT," \
                 "`status` VARCHAR(255)," \
                 "`aired` VARCHAR(255)," \
-                "`permiered` VARCHAR(255)," \
+                "`premiered` VARCHAR(255)," \
                 "`broadcast` VARCHAR(255)," \
                 "`producer` VARCHAR(255)," \
                 "`licensors` VARCHAR(255)," \
@@ -97,7 +99,7 @@ class AnimeAccess(object):
                 "`allRank` INT," \
                 "`popularityRank` INT," \
                 "`members` INT," \
-                "`favorities` INT," \
+                "`favorites` INT," \
                 "`lastUpdate` TIMESTAMP" \
                 ")"
 
@@ -158,7 +160,7 @@ class AnimeAccess(object):
     def push_work_infos_to_database(self, workInfos: list):
         query = f"INSERT INTO `{self.__workInfosTableName}` (`id`, `workId`, `workName`, `engName`, `synonymsName`, `jpName`, `workType`, `episodes`, `status`, `aired`, `premiered`, `broadcast`, `producer`, `licensors`, `studios`, `source`, `genres`, `duration`, `rating`, `score`, `scoredByUser`, `allRank`, `popularityRank`, `members`,` favorites`, `lastUpdate`) VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE engName = VALUES(engName), synonymsName = VALUES(synonymsName), jpName = VALUES(jpName), status = VALUES(status), aired = VALUES(aired), broadcast = VALUES(broadcast), score = VALUES(score), scoredByUser = VALUES(scoredByUser), allRank = VALUES(allRank), popularityRank = VALUES(popularityRank), members = VALUES(members), favorites = VALUES(favorites), lastUpdate = VALUES(lastUpdate)"
 
-        logging.info('Pushing anime list data to database.')
+        logger.info('Pushing anime list data to database.')
         workInfoProgress = tqdm(workInfos, ascii=True)
         for workInfo in workInfos:
             workInfoProgress.set_description(f'Database Processing [{workInfo["workId"]}] {workInfo["workName"]}')
@@ -174,115 +176,3 @@ class AnimeAccess(object):
 
         self.__db.databaseCommit()
 
-
-"""
-class AnimeAccess(object):
-    
-    def __init__(self, db:Database):
-        self.__db = db
-        self.__allReviewsLastPostTime = None
-        self.__lastReviewPostTime = None
-
-        self.__reviewsTableName = 'reviews'
-        self.__workInfosTableName = 'animeList'
-
-    def getAllWorkIdAndReview(self) -> dict:
-
-        '''
-        520  words  cover 68%
-        1000 words  cover 90% 
-        1200 words  cover 95%
-        1880 words  cover 99.7%
-        '''
-
-        result = self.__db.executeQuery('select reviewId, review from reviews', None)
-
-        data = {
-            'ids'    :list(),
-            'reviews':list(),
-            'lengths':list()
-        }
-
-        for element in result:
-            data['ids'].append(element['reviewId'])
-            data['reviews'].append(element['review'])
-            data['lengths'].append(len(element['review'].split(' ')))
-
-        return data
-
-    def getAllWorkLastReviewPostTime(self) -> dict:
-        
-        if self.__allReviewsLastPostTime is None:
-
-            results = self.__db.executeQuery('select workId, max(postTime) as postTime from reviews group by workId', None)
-
-            self.__allReviewsLastPostTime = dict()
-
-            for result in results:
-                self.__allReviewsLastPostTime[str(result['workId'])] = result['postTime']
-
-        return self.__allReviewsLastPostTime
-
-    def getAllWorkId(self) -> list:
-
-        query = 'select workId from ' + self.__workInfosTableName
-        results = self.__db.executeQuery(query, None)
-
-        allWorkId = list()
-
-        for result in results:
-            allWorkId.append(result.get('workId'))
-
-        return allWorkId
-
-
-    def getLastReviewPostTime(self) -> dict:
-
-        if self.__lastReviewPostTime is None:
-            results = self.__db.executeQuery('select workId, postTime from reviews order by postTime desc limit 1', None)
-
-            self.__lastReviewPostTime = results[0]
-        
-        return self.__lastReviewPostTime
-
-    def pushReviewsToDatabase(self, reviews: list):
-        query: str = "INSERT INTO `" + self.__reviewsTableName + \
-            "` (`id`, `workId`, `workName`, `postTime`, `episodesSeen`, `author`, `peopleFoundUseful`, `reviewId`, `review`, `overallRating`, `storyRating`, `animationRating`, `soundRating`, `characterRating`, `enjoymentRating`) VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE peopleFoundUseful = VALUES(peopleFoundUseful)"
-
-        for review in reviews:
-
-            args = (review['workId'], review['workName'], review['postTime'], review['episodesSeen'],  review['author'], review['peopleFoundUseful'], review['reviewId'],
-                    review['review'], review['overallRating'], review['storyRating'], review['animationRating'], review['soundRating'], review['characterRating'], review['enjoymentRating'])
-            try:
-                self.__db.executeQuery(query, args)
-            except Exception as e:
-                print(review)
-                print(e)
-                break
-
-        self.__db.databaseCommit()
-
-    def pushWorkInfosToDatabase(self, workInfos: list):
-        
-        query: str = "INSERT INTO `" + self.__workInfosTableName + \
-                "` (`id`, `workId`, `workName`, `engName`, `synonymsName`, `jpName`, `workType`, `episodes`, `status`, `aired`, `premiered`, `broadcast`, `producer`, `licensors`, `studios`, `source`, `genres`, `duration`, `rating`, `score`, `scoredByUser`, `allRank`, `popularityRank`, `members`, `favorites`, `lastUpdate`) VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE engName = VALUES(engName), synonymsName = VALUES(synonymsName), jpName = VALUES(jpName), status = VALUES(status), aired = VALUES(aired), broadcast = VALUES(broadcast), score = VALUES(score), scoredByUser = VALUES(scoredByUser), allRank = VALUES(allRank), popularityRank = VALUES(popularityRank), members = VALUES(members), favorites = VALUES(favorites), lastUpdate = VALUES(lastUpdate)"
-        
-        # push work infos to db
-        
-        logging.info('Pushing anime list data to database.')
-        workInfoProgress = tqdm(workInfos, ascii=True)
-        for workInfo in workInfos:
-
-            workInfoProgress.set_description('Database Processing [%s] %s' % (workInfo['workId'], workInfo['workName']))
-
-            args = (workInfo['workId'], workInfo['workName'], workInfo['engName'], workInfo['synonymsName'], workInfo['jpName'], workInfo['workType'], workInfo['episodes'], workInfo['status'], workInfo['aired'], workInfo['premiered'], workInfo['broadcast'], workInfo['producer'], workInfo['licensors'], workInfo['studios'], workInfo['source'], workInfo['genres'], workInfo['duration'], workInfo['rating'], workInfo['score'], workInfo['scoredByUser'], workInfo['allRank'], workInfo['popularityRank'], workInfo['members'], workInfo['favorites'], workInfo['lastUpdate'])
-
-            try:
-                self.__db.executeQuery(query, args)
-            except Exception as e:
-                print(workInfo)
-                print(e)
-                break
-
-        self.__db.databaseCommit()
-"""

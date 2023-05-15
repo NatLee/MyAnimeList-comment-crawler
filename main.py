@@ -1,9 +1,7 @@
 import argparse
-import logging
 from utils.dbUtil import Database
 from utils.crawlUtil import Crawler
 
-logging.basicConfig(level=logging.DEBUG,format='%(asctime)s - %(levelname)s : %(message)s')
 parser = argparse.ArgumentParser(description='Dataset parse.')
 parser.add_argument('--updateByAllReviewPage', action='store', nargs='?', const=True, default=False, type=bool, help='Update database by crawling all review page. (Fast)')
 parser.add_argument('--updateDataByWork', action='store', nargs='?', const=True, default=False, type=bool, help='Update database by crawling review page for each work. (Slow)')
