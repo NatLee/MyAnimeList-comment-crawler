@@ -1,5 +1,5 @@
 
-# myAnimeList Comment and Work Information Crawler
+# MyAnimeList Crawler
 
 This crawler can crawl all work information and comments from myAnimeList by sending request.
 
@@ -49,7 +49,7 @@ CREATE TABLE `animeList` (
   `episodes` int(4) DEFAULT NULL,
   `status` varchar(64) DEFAULT NULL,
   `aired` varchar(64) DEFAULT NULL,
-  `permiered` varchar(32) DEFAULT NULL,
+  `premiered` varchar(32) DEFAULT NULL,
   `broadcast` varchar(64) DEFAULT NULL,
   `producer` text DEFAULT NULL,
   `licensors` text DEFAULT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE `animeList` (
   `allRank` int(16) unsigned DEFAULT NULL,
   `popularityRank` int(16) unsigned DEFAULT NULL,
   `members` int(16) unsigned DEFAULT NULL,
-  `favorities` int(16) unsigned DEFAULT NULL,
+  `favorites` int(16) unsigned DEFAULT NULL,
   `lastUpdate` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_index` (`workId`)
