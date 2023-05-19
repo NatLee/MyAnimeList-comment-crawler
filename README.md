@@ -5,15 +5,28 @@
 
 This crawler can crawl all work information and comments from myAnimeList by sending request.
 
-## Steps 
-----------
+## Quick Start
 
 > **DO NOT SET TOO MANY PROCESSES, YOU WILL BE BANNED !!**
 
-1. Check your database information in the file `setting.ini`. I suggest you can use Docker to build a [mariaDB](https://hub.docker.com/_/mariadb).
-2. If you have not create database, you need to create and ensure that it can be accessed.
-3. Install the packages with `pip install -r requirements.txt`
-4. You can follow the help shown as following in your shell. The sample for first run, `python main.py --updateDataByWork`.
+1. Ensure your settings in `./setting.ini`.
+2. Install the required dependencies.
+
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+3. Run this crawler with the following command:
+
+  ```bash
+  python main.py --updateByAllReviewPage
+  ```
+
+## Usage
+
+```bash
+python main.py --help
+```
 
 ```
 usage: main.py [-h] [--updateByAllReviewPage [UPDATEBYALLREVIEWPAGE]]
@@ -32,5 +45,5 @@ optional arguments:
 
 ## Link
 
-This dataset is put on [Kaggle](https://www.kaggle.com/natlee/myanimelist-comment-dataset).
+The dataset is put on [Kaggle](https://www.kaggle.com/natlee/myanimelist-comment-dataset).
 
