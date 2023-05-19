@@ -18,8 +18,8 @@ DEBUG = CONFIG.getboolean('MODE', 'Debug')
 PROCESSES = CONFIG.getint('SETTING', 'ProcessesNumber')
 
 WORK_DIR = os.getcwd()
-TEMP_INFO_PICKLE_FOLDER = os.path.join(WORK_DIR, CONFIG.get('PATH', 'TempWorkInfoPicklFolder'))
-WORKINFOS_PICKLE = os.path.join(WORK_DIR, CONFIG.get('PATH', 'WorkInfosPicklePath'))
+TEMP_INFO_FOLDER = os.path.join(WORK_DIR, CONFIG.get('PATH', 'TempWorkInfoFolder'))
+WORK_INFOS = os.path.join(WORK_DIR, CONFIG.get('PATH', 'WorkInfosPath'))
 
 DATABASE_NAME = CONFIG.get('DATABASE', 'DatabaseName')
 

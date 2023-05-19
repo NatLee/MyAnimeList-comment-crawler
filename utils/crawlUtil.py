@@ -1,9 +1,10 @@
-
+import datetime
+import json
+from pathlib import Path
 import requests
 import re
 import time
 import os
-import pickle
 import multiprocessing as mp
 import random
 
@@ -11,11 +12,13 @@ from loguru import logger
 
 import backoff
 from tqdm import tqdm
-from bs4 import BeautifulSoup  
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
+from utils.extractor import AnimeDataExtractor
+
 from utils.miscUtil import TqdmUpTo, creationDate
-from utils.gloVar import PROCESSES, HEADERS, COOKIES, TEMP_INFO_PICKLE_FOLDER, WORKINFOS_PICKLE
+from utils.gloVar import PROCESSES, HEADERS, COOKIES, TEMP_INFO_FOLDER, WORK_INFOS
 from utils.dbUtil import AnimeAccess, Database
 
 
@@ -226,118 +229,40 @@ def infoCrawler(infoUrl:str = 'https://myanimelist.net/anime/52034/Oshi_no_Ko') 
     Crawl Anime Information.
     '''
 
-    dataFormat = {
-        'id': None,
-        'workId': infoUrl.split('/')[-2],
-        'workName': infoUrl.split('/')[-1],
-        'engName': None,
-        'synonymsName': None,
-        'jpName': None,
-        'workType': None,
-        'episodes': None,
-        'status': None,
-        'aired': None,
-        'premiered': None,
-        'broadcast': None,
-        'producer': None,
-        'licensors': None,
-        'studios': None,
-        'source': None,
-        'genres': None,
-        'duration': None,
-        'rating': None,
-        'score': None,
-        'scoredByUser': None,
-        'allRank': None,
-        'popularityRank': None,
-        'members': None,
-        'favorites': None,
-        'lastUpdate': None,
-    }
+    ade = AnimeDataExtractor(url=infoUrl)
 
-    if not os.path.isdir(TEMP_INFO_PICKLE_FOLDER):
-        os.makedirs(TEMP_INFO_PICKLE_FOLDER)
+    temp = Path(TEMP_INFO_FOLDER)
+    if not temp.is_dir():
+        temp.mkdir(parents=True, exist_ok=True)
 
-    workIdPickle = os.path.join(TEMP_INFO_PICKLE_FOLDER, dataFormat['workId'] + '.pkl')
+    work_id_name = str(ade.work_id).zfill(6)
+    work_id_file = temp / f'{work_id_name}.json'
 
-    if os.path.exists(workIdPickle):
-        # check last update time in local pickle
-        with open(workIdPickle, 'rb') as p:
-            loadData = pickle.load(p)
-            if (loadData['lastUpdate'] - datetime.now()) < timedelta(days=2):
+    if work_id_file.exists():
+        logger.info(f'Find -> {work_id_file}')
+        # check last update time in local file
+        with open(work_id_file, 'r', encoding='utf-8') as p:
+            loadData = json.loads(p.read())
+            last_update = loadData.get('lastUpdate')
+            last_update = datetime.strptime(last_update, '%Y-%m-%d %H:%M:%S')
+            if (last_update - datetime.now()) < timedelta(days=2):
                 return loadData
 
     time.sleep(random.randint(1,5))
 
-    slide = list()
+    try:
+        ade.get_html()
+    except Exception as e:
+        print(e)
+        print(infoUrl)
+        raise RuntimeError('You got banned!!')
 
-    while len(slide) == 0:
-        try:
-            workResponse = requests.get(infoUrl, headers=HEADERS)
-            workSoup = BeautifulSoup(workResponse.text, 'html.parser')
-            import pdb; pdb.set_trace()
-            slide = workSoup.find_all('div', 'js-scrollfix-bottom')
-            slideText = slide[0].text
-        except Exception as e:
-            print(e)
-            print(infoUrl)
-            print(slide)
-            time.sleep(random.randint(10,30))
+    data_format = ade.format_data()
 
+    with open(work_id_file, 'w', encoding='utf-8') as p:
+        json.dump(data_format, p, indent=4, ensure_ascii=False)
 
-    def catchSplitError(text: str, splitStrLeft: str, splitStrRight: str) -> str:
-        try:
-            target = text.split(splitStrLeft)[1].split(splitStrRight)[0].strip()
-            if (target.find('Unknown') >= 0) or (target.find('None found, add some') >= 0):
-                return None
-            else:
-                return target
-        except Exception as e:
-            print('No this attr.>> %s' % e)
-            return None
-    
-    dataFormat['engName'] = catchSplitError(slideText , '\nAlternative Titles\nEnglish: ', '\n')
-    dataFormat['synonymsName'] = catchSplitError(slideText , '\nSynonyms: ', '\n')
-    dataFormat['jpName'] = catchSplitError(slideText , '\nJapanese: ', '\n')
-    dataFormat['workType'] = catchSplitError(slideText , '\nInformation\n\nType:\n', '\n')
-    dataFormat['episodes'] = catchSplitError(slideText , '\nEpisodes:\n  ', '\n')
-    dataFormat['status'] = catchSplitError(slideText , '\nStatus:\n  ', '\n')
-    dataFormat['aired'] = catchSplitError(slideText , '\nAired:\n  ', '\n')
-    dataFormat['premiered'] = catchSplitError(slideText , '\nPremiered:\n', '\n')
-    dataFormat['broadcast'] = catchSplitError(slideText , '\nBroadcast:\n    ', '\n')
-    if catchSplitError(slideText , '\nProducers:\n', '\n') is None:
-        dataFormat['producer'] = None
-    else:
-        dataFormat['producer'] = catchSplitError(slideText , '\nProducers:\n', '\n').replace('       ', '')
-    if catchSplitError(slideText , '\nLicensors:\n', '\n') is None:
-        dataFormat['licensors'] = None
-    else:
-        dataFormat['licensors'] = catchSplitError(slideText , '\nLicensors:\n', '\n').replace('       ', '')
-    dataFormat['studios'] = catchSplitError(slideText , '\nStudios:\n', '\n')
-    dataFormat['source'] = catchSplitError(slideText , '\nSource:\n  ', '\n')
-    dataFormat['genres'] = catchSplitError(slideText , '\nGenres:\n', '\n')
-    dataFormat['duration'] = catchSplitError(slideText , '\nDuration:\n  ', '\n')
-    dataFormat['rating'] = catchSplitError(slideText , '\nRating:\n  ', '\n')
-    if slideText.find('\nStatistics\n\nScore:\nN/A') >= 0:
-        dataFormat['score'] = None
-    else:
-        dataFormat['score'] = catchSplitError(slideText , '\nStatistics\n\nScore:\n', ' (scored by ')[:-1]
-
-    dataFormat['scoredByUser'] = catchSplitError(slideText , ' (scored by ', ' users)\n').replace(',', '')
-    if slideText.find('\nRanked:\n  N/A') >= 0:
-        dataFormat['allRank'] = None
-    else:
-        dataFormat['allRank'] = catchSplitError(slideText , '\nRanked:\n  #', '\n')[:-1]
-
-    dataFormat['popularityRank'] = catchSplitError(slideText , '\nPopularity:\n  #', '\n')
-    dataFormat['members'] = catchSplitError(slideText , '\nMembers:\n    ', '\n').replace(',', '')
-    dataFormat['favorites'] = catchSplitError(slideText , '\nFavorites:\n  ', '\n').replace(',', '')
-    dataFormat['lastUpdate'] = datetime.now()
-
-    with open(workIdPickle, 'wb') as p:
-        pickle.dump(dataFormat, p)
-
-    return dataFormat
+    return data_format
 
 def listCrawler() -> list:
     '''
@@ -402,8 +327,8 @@ class Crawler(object):
         workInfos = self.__checkWorkInfos(days=7)
         if workInfos is None:
             self.__workInfos = listCrawler()
-            with open(WORKINFOS_PICKLE, 'wb') as p:
-                pickle.dump(self.__workInfos, p)
+            with open(WORK_INFOS, 'w', encoding='utf-8') as p:
+                json.dump(self.__workInfos, p, indent=4, ensure_ascii=False)
         return self.__workInfos
 
     def __checkWorkInfos(self, days:int = 3) -> list:
@@ -411,10 +336,10 @@ class Crawler(object):
         Check the workInfos.pkl file exist.
         '''
         # Read workInfos.pkl if exists or crawl work infos.
-        if os.path.isfile(WORKINFOS_PICKLE) and (datetime.today() - creationDate(WORKINFOS_PICKLE) < timedelta(days=days)):
-            logger.info(f'Detect [{WORKINFOS_PICKLE}] file.')
-            with open(WORKINFOS_PICKLE, 'rb') as p:
-                self.__workInfos = pickle.load(p)
+        if os.path.isfile(WORK_INFOS) and (datetime.today() - creationDate(WORK_INFOS) < timedelta(days=days)):
+            logger.info(f'Detect [{WORK_INFOS}] file.')
+            with open(WORK_INFOS, 'r', encoding='utf-8') as p:
+                self.__workInfos = json.loads(p.read())
         return self.__workInfos
 
     def setReviews(self, reviews:list) -> list:
