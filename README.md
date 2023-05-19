@@ -1,5 +1,5 @@
 
-> Notice that MyAnimeList is updated thieir website, so I'm now working on the new version of this crawler.
+> Notice that MyAnimeList has already updated their website, so I'm now working on the new version of this crawler.
 
 # MyAnimeList Crawler
 
