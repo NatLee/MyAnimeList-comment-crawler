@@ -1,5 +1,6 @@
 import datetime
 import sqlite3
+from typing import Dict, List, Any
 
 from loguru import logger
 
@@ -8,32 +9,38 @@ from utils.gloVar import DATABASE_NAME
 
 class Database(object):
     __single = None
-    def __new__(clz):
+    __db = None
+    __conn = None
+
+    def __new__(cls):
         if not Database.__single:
             Database.__db = DATABASE_NAME
-            conn = sqlite3.connect(Database.__db)
-            Database.__conn = conn
-            Database.__single = object.__new__(clz)
+            Database.__conn = sqlite3.connect(Database.__db)
+            Database.__single = super(Database, cls).__new__(cls)
         return Database.__single
-
-    def __getConnection(self):
-        return self.__conn
-
-    def getConnection(self):
-        return self.__getConnection()
 
     def executeQuery(self, query: str, args=None):
         cursor = self.__conn.cursor()
-        if args:
-            cursor.execute(query, args)
-        else:
-            cursor.execute(query)
-        result = cursor.fetchall()
-        cursor.close()
+        result = None
+        try:
+            if args:
+                cursor.execute(query, args)
+            else:
+                cursor.execute(query)
+            result = cursor.fetchall()
+        except sqlite3.Error as e:
+            logger.error(f"An error occurred: {e.args[0]}")
         return result
 
     def databaseCommit(self):
-        return self.__conn.commit()
+        try:
+            self.__conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"An error occurred: {e.args[0]}")
+
+    def closeConnection(self):
+        if self.__conn:
+            self.__conn.close()
 
 
 class AnimeAccess(object):
@@ -53,101 +60,142 @@ class AnimeAccess(object):
         self.check_and_create_work_infos_table()
 
     def check_and_create_reviews_table(self):
-        query = f"CREATE TABLE IF NOT EXISTS `{self.__reviewsTableName}` (" \
-                "`id` INT AUTO_INCREMENT PRIMARY KEY," \
-                "`workId` INT NOT NULL," \
-                "`workName` VARCHAR(255)," \
-                "`postTime` TIMESTAMP," \
-                "`episodesSeen` INT," \
-                "`author` VARCHAR(255)," \
-                "`peopleFoundUseful` INT," \
-                "`reviewId` INT UNIQUE," \
-                "`review` TEXT," \
-                "`overallRating` INT," \
-                "`storyRating` INT," \
-                "`animationRating` INT," \
-                "`soundRating` INT," \
-                "`characterRating` INT," \
-                "`enjoymentRating` INT" \
-                ")"
-
+        query = f"""
+        CREATE TABLE IF NOT EXISTS "{self.__reviewsTableName}" (
+            id INTEGER PRIMARY KEY,
+            workId INTEGER NOT NULL,
+            url TEXT,
+            workName TEXT,
+            postTime TEXT,
+            episodesSeen INTEGER,
+            overallRating INTEGER,
+            author TEXT,
+            reviewId INTEGER UNIQUE,
+            review TEXT,
+            reviewerProfileUrl TEXT,
+            reviewerImageUrl TEXT,
+            recommendationStatus TEXT,
+            nice INTEGER,
+            loveIt INTEGER,
+            funny INTEGER,
+            confusing INTEGER,
+            informative INTEGER,
+            wellWritten INTEGER,
+            creative INTEGER
+        )
+        """
         self.__db.executeQuery(query)
 
     def check_and_create_work_infos_table(self):
-        query = f"CREATE TABLE IF NOT EXISTS `{self.__workInfosTableName}` (" \
-                "`id` INT AUTO_INCREMENT PRIMARY KEY," \
-                "`workId` INT UNIQUE," \
-                "`workName` VARCHAR(255)," \
-                "`engName` VARCHAR(255)," \
-                "`synonymsName` VARCHAR(255)," \
-                "`jpName` VARCHAR(255)," \
-                "`workType` VARCHAR(255)," \
-                "`episodes` INT," \
-                "`status` VARCHAR(255)," \
-                "`aired` VARCHAR(255)," \
-                "`premiered` VARCHAR(255)," \
-                "`broadcast` VARCHAR(255)," \
-                "`producer` VARCHAR(255)," \
-                "`licensors` VARCHAR(255)," \
-                "`studios` VARCHAR(255)," \
-                "`source` VARCHAR(255)," \
-                "`genres` VARCHAR(255)," \
-                "`duration` VARCHAR(255)," \
-                "`rating` VARCHAR(255)," \
-                "`score` FLOAT," \
-                "`scoredByUser` INT," \
-                "`allRank` INT," \
-                "`popularityRank` INT," \
-                "`members` INT," \
-                "`favorites` INT," \
-                "`lastUpdate` TIMESTAMP" \
-                ")"
+        query = f"""CREATE TABLE IF NOT EXISTS `{self.__workInfosTableName}` (
+                    `id` INTEGER PRIMARY KEY,
+                    `workId` INTEGER UNIQUE,
+                    `url` TEXT,
+                    `jpName` TEXT,
+                    `engName` TEXT,
+                    `synonymsName` TEXT,
+                    `workType` TEXT,
+                    `episodes` INTEGER,
+                    `status` TEXT,
+                    `aired` TEXT,
+                    `premiered` TEXT,
+                    `producer` TEXT,
+                    `broadcast` TEXT,
+                    `licensors` TEXT,
+                    `studios` TEXT,
+                    `genres` TEXT,
+                    `source` TEXT,
+                    `duration` TEXT,
+                    `rating` TEXT,
+                    `score` REAL,
+                    `allRank` INTEGER,
+                    `popularityRank` INTEGER,
+                    `members` INTEGER,
+                    `favorites` INTEGER,
+                    `scoredByUser` INTEGER,
+                    `lastUpdate` TEXT
+                    )"""
 
         self.__db.executeQuery(query)
 
-    def get_all_work_id_and_review(self) -> dict:
-        result = self.__db.executeQuery('SELECT reviewId, review FROM reviews', None)
-        data = {
-            'ids': [],
-            'reviews': [],
-            'lengths': []
-        }
-        for element in result:
-            data['ids'].append(element['reviewId'])
-            data['reviews'].append(element['review'])
-            data['lengths'].append(len(element['review'].split(' ')))
+    def get_all_work_id_and_review(self) -> Dict[str, List[Any]]:
+        try:
+            result = self.__db.executeQuery('SELECT reviewId, review FROM reviews', None)
+            data = {
+                'ids': [],
+                'reviews': [],
+                'lengths': []
+            }
+            for element in result:
+                data['ids'].append(element['reviewId'])
+                data['reviews'].append(element['review'])
+                data['lengths'].append(len(element['review'].split(' ')))
 
-        return data
+            return data
+        except Exception as e:
+            logger.error(f"Error in get_all_work_id_and_review: {e}")
+            return {}
 
     def get_all_work_last_review_post_time(self) -> dict:
-        if self.__allReviewsLastPostTime is None:
-            results = self.__db.executeQuery('SELECT workId, MAX(postTime) as postTime FROM reviews GROUP BY workId', None)
-            self.__allReviewsLastPostTime = {str(result['workId']): result['postTime'] for result in results}
-
+        try:
+            if self.__allReviewsLastPostTime is None:
+                results = self.__db.executeQuery('SELECT workId, MAX(postTime) as postTime FROM reviews GROUP BY workId', None)
+                self.__allReviewsLastPostTime = {str(result['workId']): result['postTime'] for result in results}
+        except Exception as e:
+            logger.error(f"Error in get_all_work_last_review_post_time: {e}")
         return self.__allReviewsLastPostTime
 
     def get_all_work_id(self) -> list:
-        query = f'SELECT workId FROM {self.__workInfosTableName}'
-        results = self.__db.executeQuery(query, None)
-        return [result.get('workId') for result in results]
+        try:
+            query = f'SELECT workId FROM {self.__workInfosTableName}'
+            results = self.__db.executeQuery(query, None)
+            return [result.get('workId') for result in results]
+        except Exception as e:
+            logger.error(f"Error in get_all_work_id: {e}")
 
-    def get_last_review_post_time(self) -> dict:
-        if self.__lastReviewPostTime is None:
-            results = self.__db.executeQuery('SELECT workId, postTime FROM reviews ORDER BY postTime DESC LIMIT 1', None)
-            if results:
-                self.__lastReviewPostTime = results[0]
-            else:
-                self.__lastReviewPostTime ={
-                    'postTime':datetime.datetime(year=1900, month=1, day=1)
-                }
-        return self.__lastReviewPostTime
+    def get_all_work_urls(self) -> list:
+        try:
+            query = f'SELECT url FROM {self.__workInfosTableName}'
+            results = self.__db.executeQuery(query, None)
+            logger.info(f'URLs -> {len(results)}')
+            return [url for url, *_ in results]
+        except Exception as e:
+            logger.error(f"Error in get_all_work_urls: {e}")
+
+    def get_all_review_ids(self) -> List[int]:
+        try:
+            query = f'SELECT reviewId FROM {self.__reviewsTableName}'
+            results = self.__db.executeQuery(query, None)
+            return [result[0] for result in results]
+        except Exception as e:
+            logger.error(f"Error in get_all_review_ids: {e}")
+            return []
+
+    def review_exists(self, review_id: int) -> bool:
+        try:
+            query = f'SELECT reviewId FROM {self.__reviewsTableName} WHERE reviewId = ?'
+            result = self.__db.executeQuery(query, (review_id,))
+            return bool(result)
+        except Exception as e:
+            logger.error(f"Error in review_exists: {e}")
+            return False
 
     def push_reviews_to_database(self, reviews: list):
-        query = f"INSERT INTO `{self.__reviewsTableName}` (`id`, `workId`, `workName`, `postTime`, `episodesSeen`, `author`, `peopleFoundUseful`, `reviewId`, `review`, `overallRating`, `storyRating`, `animationRating`, `soundRating`, `characterRating`, `enjoymentRating`) VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE peopleFoundUseful = VALUES(peopleFoundUseful)"
+        query = f"""INSERT OR REPLACE INTO `{self.__reviewsTableName}` 
+        (`workId`, `reviewId`, `url`, `postTime`, `episodesSeen`, `author`, 
+        `review`, `overallRating`, `reviewerProfileUrl`, `reviewerImageUrl`, 
+        `recommendationStatus`, `nice`, `loveIt`, `funny`, `confusing`, `informative`, 
+        `wellWritten`, `creative`) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         for review in reviews:
-            args = (review['workId'], review['workName'], review['postTime'], review['episodesSeen'], review['author'], review['peopleFoundUseful'], review['reviewId'],
-                    review['review'], review['overallRating'], review['storyRating'], review['animationRating'], review['soundRating'], review['characterRating'], review['enjoymentRating'])
+            args = (review['workId'], review['reviewId'], review['url'], review['postTime'], 
+                    review['episodesSeen'], review['author'], review['review'], 
+                    review['overallRating'], review['reviewerProfileUrl'], 
+                    review['reviewerImageUrl'], review['recommendationStatus'], 
+                    review['nice'], review['loveIt'], review['funny'], 
+                    review['confusing'], review['informative'], review['wellWritten'], 
+                    review['creative'])
             try:
                 self.__db.executeQuery(query, args)
             except Exception as e:
@@ -158,14 +206,25 @@ class AnimeAccess(object):
         self.__db.databaseCommit()
 
     def push_work_infos_to_database(self, workInfos: list):
-        query = f"INSERT INTO `{self.__workInfosTableName}` (`id`, `workId`, `workName`, `engName`, `synonymsName`, `jpName`, `workType`, `episodes`, `status`, `aired`, `premiered`, `broadcast`, `producer`, `licensors`, `studios`, `source`, `genres`, `duration`, `rating`, `score`, `scoredByUser`, `allRank`, `popularityRank`, `members`,` favorites`, `lastUpdate`) VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE engName = VALUES(engName), synonymsName = VALUES(synonymsName), jpName = VALUES(jpName), status = VALUES(status), aired = VALUES(aired), broadcast = VALUES(broadcast), score = VALUES(score), scoredByUser = VALUES(scoredByUser), allRank = VALUES(allRank), popularityRank = VALUES(popularityRank), members = VALUES(members), favorites = VALUES(favorites), lastUpdate = VALUES(lastUpdate)"
+        query = f"""INSERT OR REPLACE INTO `{self.__workInfosTableName}` 
+        (`workId`, `url`, `jpName`, `engName`, `synonymsName`, `workType`, `episodes`, 
+        `status`, `aired`, `premiered`, `producer`, `broadcast`, `licensors`, `studios`, 
+        `genres`, `source`, `duration`, `rating`, `score`, `allRank`, `popularityRank`, 
+        `members`, `favorites`, `scoredByUser`, `lastUpdate`) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         logger.info('Pushing anime list data to database.')
         workInfoProgress = tqdm(workInfos, ascii=True)
-        for workInfo in workInfos:
-            workInfoProgress.set_description(f'Database Processing [{workInfo["workId"]}] {workInfo["workName"]}')
+        for workInfo in workInfoProgress:
+            workInfoProgress.set_description(f'Database Processing [{workInfo["workId"]}] {workInfo["jpName"]}')
 
-            args = (workInfo['workId'], workInfo['workName'], workInfo['engName'], workInfo['synonymsName'], workInfo['jpName'], workInfo['workType'], workInfo['episodes'], workInfo['status'], workInfo['aired'], workInfo['premiered'], workInfo['broadcast'], workInfo['producer'], workInfo['licensors'], workInfo['studios'], workInfo['source'], workInfo['genres'], workInfo['duration'], workInfo['rating'], workInfo['score'], workInfo['scoredByUser'], workInfo['allRank'], workInfo['popularityRank'], workInfo['members'], workInfo['favorites'], workInfo['lastUpdate'])
+            args = (workInfo['workId'], workInfo['url'], workInfo['jpName'], workInfo['engName'], 
+                    workInfo['synonymsName'], workInfo['workType'], workInfo['episodes'], workInfo['status'], 
+                    workInfo['aired'], workInfo['premiered'], workInfo['producer'], workInfo['broadcast'], 
+                    workInfo['licensors'], workInfo['studios'], workInfo['genres'], workInfo['source'], 
+                    workInfo['duration'], workInfo['rating'], workInfo['score'], workInfo['allRank'], 
+                    workInfo['popularityRank'], workInfo['members'], workInfo['favorites'], 
+                    workInfo['scoredByUser'], workInfo['lastUpdate'])
 
             try:
                 self.__db.executeQuery(query, args)
@@ -175,4 +234,3 @@ class AnimeAccess(object):
                 break
 
         self.__db.databaseCommit()
-
