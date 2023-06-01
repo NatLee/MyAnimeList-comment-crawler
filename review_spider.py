@@ -37,64 +37,65 @@ class ReviewSpider(scrapy.Spider):
         review_blocks = response.css('div.review-element')
 
         if not review_blocks:
-            logger.warning(f"No review blocks found on page: {url}")
+            logger.warning(f"[{work_id}][{work_name}] No review blocks found on page")
 
             # Proceed to next work
             try:
                 next_work_url = next(self.urls)
+                logger.info(f'Go to next URL -> {next_work_url}')
                 base_url = f'{next_work_url}/reviews?sort=newest&filter_check=&filter_hide=&preliminary=on&spoiler=on&p='
                 yield scrapy.Request(url=base_url+'1', callback=self.parse, meta={'base_url': base_url, 'page_number': 2, 'work_url': next_work_url})
             except StopIteration:  # No more urls to process
                 return
-        else:
-            reviews = []
-    
-            for review in tqdm(review_blocks):
-                reactions = review.css('.btn-reaction .num::text').getall()
-                # Initialize dictionary with all reaction types
-                reactions = {
-                    'nice': '0',
-                    'loveIt': '0',
-                    'funny': '0',
-                    'confusing': '0',
-                    'informative': '0',
-                    'wellWritten': '0',
-                    'creative': '0'
-                }
-                reaction_blocks = review.css('.btn-reaction')
-                for reaction in reaction_blocks:
-                    reaction_type = reaction.css('::attr(title)').get()
-                    reaction_count = reaction.css('.num::text').get()
-                    # Only update the reactions that exist in the review
-                    if reaction_type in reactions:
-                        reactions[reaction_type] = reaction_count
 
-                review_id = review.css('div.open a::attr(href)').re_first(r'\d+')
+        reviews = []
 
-                review_data = {
-                    'workId': work_id,
-                    'workName': work_name,
-                    'reviewId': review_id,
-                    'url': url,
-                    'postTime': review.css('div.update_at::text').get(),
-                    'episodesSeen': review.css('.tag.preliminary span::text').get().strip() if review.css('.tag.preliminary span::text').get() else None,
-                    'author': review.css('div.username a::text').get(),
-                    'review': ''.join(review.css('div.text *::text').getall()).strip(),
-                    'overallRating': review.css('div.rating span.num::text').get(),
-                    'reviewerProfileUrl': review.css('div.thumb a::attr(href)').get(),
-                    'reviewerImageUrl': review.css('div.thumb a img::attr(src)').get(),
-                    'recommendationStatus': review.css('.tag.recommended::text').get().strip() if review.css('.tag.recommended::text').get() else None,
-                }
-                review_data.update(reactions)
-                reviews.append(review_data)
+        for review in tqdm(review_blocks):
+            reactions = review.css('.btn-reaction .num::text').getall()
+            # Initialize dictionary with all reaction types
+            reactions = {
+                'nice': '0',
+                'loveIt': '0',
+                'funny': '0',
+                'confusing': '0',
+                'informative': '0',
+                'wellWritten': '0',
+                'creative': '0'
+            }
+            reaction_blocks = review.css('.btn-reaction')
+            for reaction in reaction_blocks:
+                reaction_type = reaction.css('::attr(title)').get()
+                reaction_count = reaction.css('.num::text').get()
+                # Only update the reactions that exist in the review
+                if reaction_type in reactions:
+                    reactions[reaction_type] = reaction_count
 
-            logger.info(f"Pushing {len(reviews)} reviews to the database")
-            self.anime_access.push_reviews_to_database(reviews)
+            review_id = review.css('div.open a::attr(href)').re_first(r'\d+')
 
-            base_url = response.meta['base_url']
-            page_number = response.meta['page_number']
-            next_page = f'{base_url}{page_number}'
-            logger.info(f"Following link to next page: [{work_id}][{work_name}] -> Page={page_number}")
-            yield scrapy.Request(next_page, self.parse, meta={'base_url': base_url, 'page_number': page_number+1, 'work_url': response.meta['work_url']})
+            review_data = {
+                'workId': work_id,
+                'workName': work_name,
+                'reviewId': review_id,
+                'url': url,
+                'postTime': review.css('div.update_at::text').get(),
+                'episodesSeen': review.css('.tag.preliminary span::text').get().strip() if review.css('.tag.preliminary span::text').get() else None,
+                'author': review.css('div.username a::text').get(),
+                'review': ''.join(review.css('div.text *::text').getall()).strip(),
+                'overallRating': review.css('div.rating span.num::text').get(),
+                'reviewerProfileUrl': review.css('div.thumb a::attr(href)').get(),
+                'reviewerImageUrl': review.css('div.thumb a img::attr(src)').get(),
+                'recommendationStatus': review.css('.tag.recommended::text').get().strip() if review.css('.tag.recommended::text').get() else None,
+            }
+            review_data.update(reactions)
+            reviews.append(review_data)
+
+        logger.info(f"[{work_id}][{work_name}] Pushing {len(reviews)} reviews to the database")
+        self.anime_access.push_reviews_to_database(reviews)
+
+        base_url = response.meta['base_url']
+        page_number = response.meta['page_number']
+        next_page = f'{base_url}{page_number}'
+        logger.info(f"[{work_id}][{work_name}] Go to next page -> Page={page_number}")
+        yield scrapy.Request(next_page, self.parse, meta={'base_url': base_url, 'page_number': page_number+1, 'work_url': response.meta['work_url']})
 
 
