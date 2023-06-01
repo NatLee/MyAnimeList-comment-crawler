@@ -14,12 +14,10 @@ COOKIES = {'reviews_inc_preliminary': '1', 'reviews_sort': 'recent'}
 CONFIG = configparser.ConfigParser()
 CONFIG.read('setting.ini')
 
-DEBUG = CONFIG.getboolean('MODE', 'Debug')
-PROCESSES = CONFIG.getint('SETTING', 'ProcessesNumber')
+RANK_INCREMENT = CONFIG.getint('SETTING', 'RankIncrement')
 
 WORK_DIR = os.getcwd()
 TEMP_INFO_FOLDER = os.path.join(WORK_DIR, CONFIG.get('PATH', 'TempWorkInfoFolder'))
-WORK_INFOS = os.path.join(WORK_DIR, CONFIG.get('PATH', 'WorkInfosPath'))
 
 DATABASE_NAME = CONFIG.get('DATABASE', 'DatabaseName')
 
