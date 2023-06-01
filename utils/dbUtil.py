@@ -182,14 +182,14 @@ class AnimeAccess(object):
 
     def push_reviews_to_database(self, reviews: list):
         query = f"""INSERT OR REPLACE INTO `{self.__reviewsTableName}` 
-        (`workId`, `reviewId`, `url`, `postTime`, `episodesSeen`, `author`, 
+        (`workId`, `reviewId`, `workName`, `url`, `postTime`, `episodesSeen`, `author`, 
         `review`, `overallRating`, `reviewerProfileUrl`, `reviewerImageUrl`, 
         `recommendationStatus`, `nice`, `loveIt`, `funny`, `confusing`, `informative`, 
         `wellWritten`, `creative`) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         for review in reviews:
-            args = (review['workId'], review['reviewId'], review['url'], review['postTime'], 
+            args = (review['workId'], review['reviewId'], review['workName'], review['url'], review['postTime'], 
                     review['episodesSeen'], review['author'], review['review'], 
                     review['overallRating'], review['reviewerProfileUrl'], 
                     review['reviewerImageUrl'], review['recommendationStatus'], 
