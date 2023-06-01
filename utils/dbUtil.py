@@ -216,9 +216,7 @@ class AnimeAccess(object):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         logger.info('Pushing anime list data to database.')
-        workInfoProgress = tqdm(workInfos, ascii=True)
-        for workInfo in workInfoProgress:
-            workInfoProgress.set_description(f'Database Processing [{workInfo["workId"]}] {workInfo["jpName"]}')
+        for workInfo in workInfos:
 
             args = (workInfo['workId'], workInfo['url'], workInfo['jpName'], workInfo['engName'], 
                     workInfo['synonymsName'], workInfo['workType'], workInfo['episodes'], workInfo['status'], 
