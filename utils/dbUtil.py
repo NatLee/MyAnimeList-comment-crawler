@@ -104,6 +104,8 @@ class AnimeAccess(object):
                     `licensors` TEXT,
                     `studios` TEXT,
                     `genres` TEXT,
+                    `themes` TEXT,
+                    `demographic` TEXT,
                     `source` TEXT,
                     `duration` TEXT,
                     `rating` TEXT,
@@ -209,9 +211,9 @@ class AnimeAccess(object):
         query = f"""INSERT OR REPLACE INTO `{self.__workInfosTableName}` 
         (`workId`, `url`, `jpName`, `engName`, `synonymsName`, `workType`, `episodes`, 
         `status`, `aired`, `premiered`, `producer`, `broadcast`, `licensors`, `studios`, 
-        `genres`, `source`, `duration`, `rating`, `score`, `allRank`, `popularityRank`, 
+        `genres`, `themes`, `demographic`, `source`, `duration`, `rating`, `score`, `allRank`, `popularityRank`, 
         `members`, `favorites`, `scoredByUser`, `lastUpdate`) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         logger.info('Pushing anime list data to database.')
         workInfoProgress = tqdm(workInfos, ascii=True)
@@ -221,7 +223,7 @@ class AnimeAccess(object):
             args = (workInfo['workId'], workInfo['url'], workInfo['jpName'], workInfo['engName'], 
                     workInfo['synonymsName'], workInfo['workType'], workInfo['episodes'], workInfo['status'], 
                     workInfo['aired'], workInfo['premiered'], workInfo['producer'], workInfo['broadcast'], 
-                    workInfo['licensors'], workInfo['studios'], workInfo['genres'], workInfo['source'], 
+                    workInfo['licensors'], workInfo['studios'], workInfo['genres'], workInfo['themes'], workInfo['demographic'], workInfo['source'], 
                     workInfo['duration'], workInfo['rating'], workInfo['score'], workInfo['allRank'], 
                     workInfo['popularityRank'], workInfo['members'], workInfo['favorites'], 
                     workInfo['scoredByUser'], workInfo['lastUpdate'])

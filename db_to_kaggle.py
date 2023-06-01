@@ -8,7 +8,7 @@ conn = sqlite3.connect("anime.db")
 # =================================================================
 # Query the database and convert to DataFrame
 query = '''
-SELECT workId, engName, synonymsName, jpName, episodes, genres
+SELECT workId, engName, synonymsName, jpName, episodes, genres, themes, demographic
 FROM animeList
 '''
 df = pd.read_sql_query(query, conn)

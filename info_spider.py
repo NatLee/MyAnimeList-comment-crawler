@@ -55,6 +55,13 @@ class InfoSpider(scrapy.Spider):
     def parse_info(self, response):
         url = response.url
         work_id = response.url.split('/')[4]
+        themes = ', '.join(response.xpath('//span[text()="Themes:"]/following-sibling::a/text()').getall())
+        if not themes:
+            themes = response.xpath('//span[text()="Theme:"]/following-sibling::a/text()').get(default='') # old style for MAL
+        genres = ', '.join(response.xpath('//span[text()="Genres:"]/following-sibling::a/text()').getall())
+        if not genres:
+            genres = response.xpath('//span[text()="Genre:"]/following-sibling::a/text()').get(default='') # old style for MAL
+
         data = {
             'workId': work_id,
             'url': url,
@@ -68,9 +75,11 @@ class InfoSpider(scrapy.Spider):
             'premiered': response.xpath('//span[text()="Premiered:"]/following-sibling::a/text()').get(default=''),
             'producer': ', '.join(response.xpath('//span[text()="Producers:"]/following-sibling::a/text()').getall()),
             'broadcast': response.xpath('//span[contains(text(), "Broadcast:")]/following-sibling::text()').get(default='').strip(),
-            'licensors': response.xpath('//span[text()="Licensors:"]/following-sibling::a/text()').get(default=''),
-            'studios': response.xpath('//span[text()="Studios:"]/following-sibling::a/text()').get(default=''),
-            'genres': response.xpath('//span[text()="Genres:"]/following-sibling::a/text()').get(default=''),
+            'licensors': ', '.join(response.xpath('//span[text()="Licensors:"]/following-sibling::a/text()').getall()),
+            'studios': ', '.join(response.xpath('//span[text()="Studios:"]/following-sibling::a/text()').getall()),
+            'genres': genres,
+            'themes': themes,
+            'demographic': response.xpath('//span[text()="Demographic:"]/following-sibling::a/text()').get(default=''),
             'source': response.xpath('//span[contains(text(), "Source:")]/following-sibling::text()').get(default='').strip(),
             'duration': response.xpath('//span[contains(text(), "Duration:")]/following-sibling::text()').get(default='').strip(),
             'rating': response.xpath('//span[text()="Rating:"]/following::text()').get().strip(),
