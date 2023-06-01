@@ -3,3 +3,4 @@ requests
 backoff
 bs4
 loguru
+scrapy
