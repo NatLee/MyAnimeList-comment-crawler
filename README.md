@@ -16,7 +16,7 @@ This crawler can crawl all work information and reviews from myAnimeList by usin
 ### Crawl Anime Infomation
 
   ```bash
-  scrapy runspider info_spider.py
+  scrapy runspider info_spider.py --nolog
   ```
 
   ```json
@@ -54,7 +54,7 @@ This crawler can crawl all work information and reviews from myAnimeList by usin
 > Need crawl information of works at first because we need the list of Anime works in `myanimelist`.
 
 ```bash
-scrapy runspider review_spider.py
+scrapy runspider review_spider.py --nolog
 ```
 
 ## Link
