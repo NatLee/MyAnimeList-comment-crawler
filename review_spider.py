@@ -7,7 +7,7 @@ class ReviewSpider(scrapy.Spider):
     name = 'review_spider'
     allowed_domains = ['myanimelist.net']
     custom_settings = {
-        'DOWNLOAD_DELAY': 7,
+        'DOWNLOAD_DELAY': 4,
         #'RETRY_HTTP_CODES': [429],
         #'RETRY_TIMES': 10
     }
