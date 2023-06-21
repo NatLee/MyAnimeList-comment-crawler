@@ -71,13 +71,17 @@ scrapy runspider review_spider.py --nolog
 
 The dataset is put on Kaggle.
 
-- Version 1 (2006/11 to 2019/06) (MALCoD)[https://www.kaggle.com/natlee/myanimelist-comment-dataset]
+- Version 1 (2006/11 to 2019/06)
+  
+  [MALCoD](https://www.kaggle.com/natlee/myanimelist-comment-dataset)
 
   Contains 130K commnets.
 
 After many years, the site updated. So I refactored this code to fit the new version of MyAnimeList.
 
-- Version 2 (2006/11 to 2023/06) (MALCoDv2)[https://www.kaggle.com/natlee/myanimelist-comment-dataset-v2]
+- Version 2 (2006/11 to 2023/06)
+  
+  [MALCoDv2](https://www.kaggle.com/natlee/myanimelist-comment-dataset-v2)
 
   Contains 220K commnets.
 
